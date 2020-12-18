@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
+ * 加载 Bean 的流程
  * Subclasses must initialize the bean factory and any other variables they need.
  *
  * @author Rod Johnson
@@ -204,6 +205,10 @@ public abstract class AbstractBeanFactoryTests {
 		assertThat(dad.getName().equals("Albert")).as("Dad has correct name").isTrue();
 	}
 
+	/**
+	 * 单例的 FactoryBean 的单元测试
+	 * @throws Exception
+	 */
 	@Test
 	public void factorySingleton() throws Exception {
 		assertThat(getBeanFactory().isSingleton("&singletonFactory")).isTrue();

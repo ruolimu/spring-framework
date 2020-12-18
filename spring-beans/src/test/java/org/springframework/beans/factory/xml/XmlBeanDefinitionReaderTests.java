@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
+ * 解析 XML 配置文件成对应的 BeanDefinition 们的流程
  * @author Rick Evans
  * @author Juergen Hoeller
  * @author Sam Brannen
