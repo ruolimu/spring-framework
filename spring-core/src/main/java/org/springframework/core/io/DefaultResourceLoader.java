@@ -50,12 +50,17 @@ public class DefaultResourceLoader implements ResourceLoader {
 	@Nullable
 	private ClassLoader classLoader;
 
+	/**
+	 * ProtocolResolver 集合
+	 */
 	private final Set<ProtocolResolver> protocolResolvers = new LinkedHashSet<>(4);
 
 	private final Map<Class<?>, Map<Resource, ?>> resourceCaches = new ConcurrentHashMap<>(4);
 
 
 	/**
+	 * 【变化】5.3以后无参构造使用线程上下文的类加载器
+	 * 5.3以前 在使用不带参数的构造函数时，使用的 ClassLoader 为默认的 ClassLoader（一般为 Thread.currentThread()#getContextClassLoader() ）
 	 * Create a new DefaultResourceLoader.
 	 * <p>ClassLoader access will happen using the thread context class loader
 	 * at the time of actual resource access (since 5.3). For more control, pass
@@ -66,6 +71,7 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 	/**
+	 * 在使用带参数的构造函数时，可以通过 ClassUtils#getDefaultClassLoader()获取
 	 * Create a new DefaultResourceLoader.
 	 * @param classLoader the ClassLoader to load class path resources with, or {@code null}
 	 * for using the thread context class loader at the time of actual resource access
@@ -94,10 +100,12 @@ public class DefaultResourceLoader implements ResourceLoader {
 	@Override
 	@Nullable
 	public ClassLoader getClassLoader() {
+		//这里先获取当前线程上下文的类加载器，如果为空才获取加载ClassUtils的类加载器
 		return (this.classLoader != null ? this.classLoader : ClassUtils.getDefaultClassLoader());
 	}
 
 	/**
+	 * 在此资源加载器中注册给定的解析器，从而允许处理其他协议。
 	 * Register the given resolver with this resource loader, allowing for
 	 * additional protocols to be handled.
 	 * <p>Any such resolver will be invoked ahead of this loader's standard
@@ -111,6 +119,7 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 	/**
+	 * 返回当前注册的协议解析器的集合，以进行自省和修改。
 	 * Return the collection of currently registered protocol resolvers,
 	 * allowing for introspection as well as modification.
 	 * @since 4.3
@@ -139,11 +148,22 @@ public class DefaultResourceLoader implements ResourceLoader {
 		this.resourceCaches.clear();
 	}
 
-
+	/**
+	 * 【核心方法】根据提供的 location 返回相应的 Resource
+	 * 依次通过
+	 * 		{@link ClassPathContextResource}
+	 * 		{@link ClassPathResource}
+	 * 		{@link FileUrlResource}
+	 * 		{@link UrlResource}
+	 * 来加载资源
+	 * @param location the resource location
+	 * @return
+	 */
 	@Override
 	public Resource getResource(String location) {
 		Assert.notNull(location, "Location must not be null");
 
+		//通过 ProtocolResolver（用户自定义协议资源解决策略） 来加载资源
 		for (ProtocolResolver protocolResolver : getProtocolResolvers()) {
 			Resource resource = protocolResolver.resolve(location, this);
 			if (resource != null) {
@@ -151,19 +171,24 @@ public class DefaultResourceLoader implements ResourceLoader {
 			}
 		}
 
+		//以 / 开头，返回该路径下 ClassPathContextResource 类型的资源
 		if (location.startsWith("/")) {
 			return getResourceByPath(location);
 		}
-		else if (location.startsWith(CLASSPATH_URL_PREFIX)) {
+		//以 classpath: 开头，返回 ClassPathResource 类型的资源
+		else if (location.startsWith(CLASSPATH_URL_PREFIX)) { //"classpath:"
 			return new ClassPathResource(location.substring(CLASSPATH_URL_PREFIX.length()), getClassLoader());
 		}
+		//根据是否为文件 URL ，是则返回 FileUrlResource 类型的资源，否则返回 UrlResource 类型的资源
 		else {
 			try {
+				//构造URL，尝试对 location 进行资源定位
 				// Try to parse the location as a URL...
 				URL url = new URL(location);
 				return (ResourceUtils.isFileURL(url) ? new FileUrlResource(url) : new UrlResource(url));
 			}
 			catch (MalformedURLException ex) {
+				//返回 ClassPathContextResource 类型的资源
 				// No URL -> resolve as resource path.
 				return getResourceByPath(location);
 			}
@@ -171,6 +196,34 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 	/**
+	 * 演示 DefaultResourceLoader 加载资源的具体策略
+	 */
+	/*public static void main(String[] args) {
+		ResourceLoader resourceLoader = new DefaultResourceLoader();
+
+		//对于 fileResource1 ，我们更加希望是 FileSystemResource 资源类型。但是，事与愿违，它是 ClassPathResource 类型。为什么呢？
+		//在 DefaultResourceLoader#getResource() 方法的资源加载策略中，我们知道 "C:/Users/ruoli/Documents/ruoli.txt" 地址，
+		//其实在该方法中没有相应的资源类型，那么它就会在抛出 MalformedURLException 异常时，
+		//通过 DefaultResourceLoader#getResourceByPath(...) 方法，构造一个 ClassPathResource 类型的资源
+		Resource fileResource1 = resourceLoader.getResource("C:/Users/ruoli/Documents/ruoli.txt");
+		System.out.println("fileResource1 is FileSystemResource:" + (fileResource1 instanceof FileSystemResource));//false
+
+		ResourceLoader fileSystemResourceLoader = new FileSystemResourceLoader();
+		Resource fileResource1 = fileSystemResourceLoader.getResource("C:/Users/ruoli/Documents/ruoli.txt");
+		System.out.println("fileResource1 is FileSystemResource:" + (fileResource1 instanceof FileSystemResource));//true
+
+		Resource fileResource2 = resourceLoader.getResource("/Users/ruoli/Documents/ruoli.txt");
+		System.out.println("fileResource2 is ClassPathResource:" + (fileResource2 instanceof ClassPathResource));//true
+
+		Resource urlResource1 = resourceLoader.getResource("file:/Users/ruoli/Documents/ruoli.txt");
+		System.out.println("urlResource1 is UrlResource:" + (urlResource1 instanceof UrlResource));//true
+
+		Resource urlResource2 = resourceLoader.getResource("http://www.baidu.com");
+		System.out.println("urlResource1 is urlResource:" + (urlResource2 instanceof  UrlResource));//true
+	}*/
+
+	/**
+	 * 返回给定路径下的Resource
 	 * Return a Resource handle for the resource at the given path.
 	 * <p>The default implementation supports class path locations. This should
 	 * be appropriate for standalone implementations but can be overridden,

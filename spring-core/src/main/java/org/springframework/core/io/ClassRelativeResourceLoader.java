@@ -20,6 +20,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
+ * 可以根据给定的 class 所在包或者所在包的子包下加载资源
+ *
  * {@link ResourceLoader} implementation that interprets plain resource paths
  * as relative to a given {@code java.lang.Class}.
  *
@@ -50,6 +52,7 @@ public class ClassRelativeResourceLoader extends DefaultResourceLoader {
 
 
 	/**
+	 * 与 {@link FileSystemResourceLoader} 类似
 	 * ClassPathResource that explicitly expresses a context-relative path
 	 * through implementing the ContextResource interface.
 	 */

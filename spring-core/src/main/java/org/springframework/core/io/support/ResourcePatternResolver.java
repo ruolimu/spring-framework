@@ -22,8 +22,13 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
 /**
+ * 支持根据指定的资源路径匹配模式每次返回多个 Resource 实例
+ *
  * Strategy interface for resolving a location pattern (for example,
  * an Ant-style path pattern) into Resource objects.
+ *
+ *{@link ResourceLoader} 的 Resource getResource(String location) 方法，每次只能根据 location 返回一个 Resource 。
+ *  * 当需要加载多个资源时，我们除了多次调用 #{@link ResourceLoader#getResource(String location)} 方法外，别无他法。
  *
  * <p>This is an extension to the {@link org.springframework.core.io.ResourceLoader}
  * interface. A passed-in ResourceLoader (for example, an
@@ -60,9 +65,10 @@ public interface ResourcePatternResolver extends ResourceLoader {
 	 * for example in the root of all deployed JAR files.
 	 * @see org.springframework.core.io.ResourceLoader#CLASSPATH_URL_PREFIX
 	 */
-	String CLASSPATH_ALL_URL_PREFIX = "classpath*:";
+	String CLASSPATH_ALL_URL_PREFIX = "classpath*:"; //增加了新的协议前缀，该协议前缀由其子类负责实现
 
 	/**
+	 * 根据路径匹配模式返回多个 Resource 实例 → Resource[]
 	 * Resolve the given location pattern into Resource objects.
 	 * <p>Overlapping resource entries that point to the same physical
 	 * resource should be avoided, as far as possible. The result should

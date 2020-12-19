@@ -20,6 +20,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ResourceUtils;
 
 /**
+ * 统一资源定位器
+ * 定义资源加载器，主要应用于根据给定的资源文件地址，返回对应的 Resource
  * Strategy interface for loading resources (e.. class path or file system
  * resources). An {@link org.springframework.context.ApplicationContext}
  * is required to provide this functionality, plus extended
@@ -42,10 +44,16 @@ import org.springframework.util.ResourceUtils;
 public interface ResourceLoader {
 
 	/** Pseudo URL prefix for loading from the class path: "classpath:". */
-	String CLASSPATH_URL_PREFIX = ResourceUtils.CLASSPATH_URL_PREFIX;
+	String CLASSPATH_URL_PREFIX = ResourceUtils.CLASSPATH_URL_PREFIX; //CLASSPATH URL 前缀。默认为："classpath:"
 
 
 	/**
+	 * 根据所提供资源的路径 location 返回 Resource 实例
+	 * 该方法支持以下模式的资源加载：
+	 * 		1.URL位置资源，如 "file:C:/test.dat"
+	 * 		2.ClassPath位置资源，如 "classpath:test.dat
+	 * 		3.相对路径资源，如 "WEB-INF/test.dat" ，此时返回的Resource 实例，根据实现不同而不同
+	 * 		4.还有其他资源的拓展 见 ResourceUtils
 	 * Return a Resource handle for the specified resource location.
 	 * <p>The handle should always be a reusable resource descriptor,
 	 * allowing for multiple {@link Resource#getInputStream()} calls.
@@ -67,6 +75,7 @@ public interface ResourceLoader {
 	Resource getResource(String location);
 
 	/**
+	 * ClassPathResource ，这个类是可以根据指定的 ClassLoader 来加载资源的
 	 * Expose the ClassLoader used by this ResourceLoader.
 	 * <p>Clients which need to access the ClassLoader directly can do so
 	 * in a uniform manner with the ResourceLoader, rather than relying
