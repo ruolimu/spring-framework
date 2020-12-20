@@ -16,19 +16,20 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.xml.sax.EntityResolver;
-import org.xml.sax.InputSource;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
+ * Spring Bean dtd 解码器，用来从 classpath 或者 jar 文件中加载 dtd
+ *
  * {@link EntityResolver} implementation for the Spring beans DTD,
  * to load the DTD from the Spring class path (or JAR file).
  *

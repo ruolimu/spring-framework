@@ -26,6 +26,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
+ * 检测XML流是否正在使用基于DTD或XSD的验证。
  * Detects whether an XML stream is using DTD- or XSD-based validation.
  *
  * @author Rob Harrop
@@ -58,6 +59,7 @@ public class XmlValidationModeDetector {
 
 
 	/**
+	 * XML文档中的令牌，该令牌声明DTD用于验证，因此正在使用DTD验证
 	 * The token in a XML document that declares the DTD to use for validation
 	 * and thus that DTD validation is being used.
 	 */
@@ -91,25 +93,32 @@ public class XmlValidationModeDetector {
 	public int detectValidationMode(InputStream inputStream) throws IOException {
 		// Peek into the file to look for DOCTYPE.
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+			// 是否为 DTD 校验模式。默认为非 DTD 模式，即 XSD 模式
 			boolean isDtdValidated = false;
 			String content;
+			// <0> 循环，逐行读取 XML 文件的内容来进行自动判断
 			while ((content = reader.readLine()) != null) {
+				// 如果是注释则跳过
 				content = consumeCommentTokens(content);
 				if (this.inComment || !StringUtils.hasText(content)) {
 					continue;
 				}
+				// <1> 判断内容中如果包含有 "DOCTYPE“ ，则为 DTD 验证模式
 				if (hasDoctype(content)) {
 					isDtdValidated = true;
 					break;
 				}
+				// <2>  hasOpeningTag 方法会校验，如果这一行有 < ，并且 < 后面跟着的是字母，则返回 true
 				if (hasOpeningTag(content)) {
 					// End of meaningful data...
 					break;
 				}
 			}
+			// 返回 VALIDATION_DTD or VALIDATION_XSD 模式
 			return (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);
 		}
 		catch (CharConversionException ex) {
+			// <3> 返回 VALIDATION_AUTO 模式
 			// Choked on some character encoding...
 			// Leave the decision up to the caller.
 			return VALIDATION_AUTO;
@@ -118,6 +127,7 @@ public class XmlValidationModeDetector {
 
 
 	/**
+	 * 有 “DOCTYPE” → DTD
 	 * Does the content contain the DTD DOCTYPE declaration?
 	 */
 	private boolean hasDoctype(String content) {
@@ -125,6 +135,7 @@ public class XmlValidationModeDetector {
 	}
 
 	/**
+	 * 有 < → XSD
 	 * Does the supplied content contain an XML opening tag. If the parse state is currently
 	 * in an XML comment then this method always returns false. It is expected that all comment
 	 * tokens will have consumed for the supplied content before passing the remainder to this method.
@@ -134,8 +145,9 @@ public class XmlValidationModeDetector {
 			return false;
 		}
 		int openTagIndex = content.indexOf('<');
-		return (openTagIndex > -1 && (content.length() > openTagIndex + 1) &&
-				Character.isLetter(content.charAt(openTagIndex + 1)));
+		return (openTagIndex > -1 // < 存在
+				&& (content.length() > openTagIndex + 1) // < 后面还有内容
+				&& Character.isLetter(content.charAt(openTagIndex + 1)));// < 后面的内容是字幕
 	}
 
 	/**
@@ -145,6 +157,7 @@ public class XmlValidationModeDetector {
 	 */
 	@Nullable
 	private String consumeCommentTokens(String line) {
+		//如果这一行不包含注释标记 "<!--" 或 ”-->“，则直接把这一行返回
 		int indexOfStartComment = line.indexOf(START_COMMENT);
 		if (indexOfStartComment == -1 && !line.contains(END_COMMENT)) {
 			return line;
@@ -166,6 +179,7 @@ public class XmlValidationModeDetector {
 	}
 
 	/**
+	 * 如果包含头标记，则返回头标记以后的内容；如果包含结束标记，则返回标记后面的内容
 	 * Consume the next comment token, update the "inComment" flag
 	 * and return the remaining content.
 	 */

@@ -16,21 +16,21 @@
 
 package org.springframework.beans.factory.xml;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.lang.Nullable;
+import org.springframework.util.xml.XmlValidationModeDetector;
 import org.w3c.dom.Document;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 
-import org.springframework.lang.Nullable;
-import org.springframework.util.xml.XmlValidationModeDetector;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
+ * 定义从资源文件加载到转换为 Document 的功能
  * Spring's default {@link DocumentLoader} implementation.
  *
  * <p>Simply loads {@link Document documents} using the standard JAXP-configured
@@ -68,12 +68,14 @@ public class DefaultDocumentLoader implements DocumentLoader {
 	@Override
 	public Document loadDocument(InputSource inputSource, EntityResolver entityResolver,
 			ErrorHandler errorHandler, int validationMode, boolean namespaceAware) throws Exception {
-
+		// <1> 创建 DocumentBuilderFactory
 		DocumentBuilderFactory factory = createDocumentBuilderFactory(validationMode, namespaceAware);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Using JAXP provider [" + factory.getClass().getName() + "]");
 		}
+		// <2> 创建 DocumentBuilder
 		DocumentBuilder builder = createDocumentBuilder(factory, entityResolver, errorHandler);
+		// <3> 解析 XML InputSource 返回 Document 对象
 		return builder.parse(inputSource);
 	}
 
@@ -87,15 +89,15 @@ public class DefaultDocumentLoader implements DocumentLoader {
 	 */
 	protected DocumentBuilderFactory createDocumentBuilderFactory(int validationMode, boolean namespaceAware)
 			throws ParserConfigurationException {
-
+		// 创建 DocumentBuilderFactory
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		factory.setNamespaceAware(namespaceAware);
+		factory.setNamespaceAware(namespaceAware); // 设置命名空间支持
 
 		if (validationMode != XmlValidationModeDetector.VALIDATION_NONE) {
-			factory.setValidating(true);
+			factory.setValidating(true); // 开启校验
 			if (validationMode == XmlValidationModeDetector.VALIDATION_XSD) {
 				// Enforce namespace aware for XSD...
-				factory.setNamespaceAware(true);
+				factory.setNamespaceAware(true); // XSD 模式下，强制设置命名空间支持
 				try {
 					factory.setAttribute(SCHEMA_LANGUAGE_ATTRIBUTE, XSD_SCHEMA_LANGUAGE);
 				}
@@ -127,11 +129,13 @@ public class DefaultDocumentLoader implements DocumentLoader {
 	protected DocumentBuilder createDocumentBuilder(DocumentBuilderFactory factory,
 			@Nullable EntityResolver entityResolver, @Nullable ErrorHandler errorHandler)
 			throws ParserConfigurationException {
-
+		// 创建 DocumentBuilder 对象
 		DocumentBuilder docBuilder = factory.newDocumentBuilder();
+		// <x> 设置 EntityResolver 属性
 		if (entityResolver != null) {
 			docBuilder.setEntityResolver(entityResolver);
 		}
+		// 设置 ErrorHandler 属性
 		if (errorHandler != null) {
 			docBuilder.setErrorHandler(errorHandler);
 		}
