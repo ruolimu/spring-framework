@@ -16,12 +16,14 @@
 
 package org.springframework.core;
 
-import java.util.function.Function;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.util.function.Function;
+
 /**
+ * 定义了与其它对象的（元数据）进行连接和访问的约定，可以通过该接口对属性进行获取、设置、删除操作
+ *
  * Interface defining a generic contract for attaching and accessing metadata
  * to/from arbitrary objects.
  *

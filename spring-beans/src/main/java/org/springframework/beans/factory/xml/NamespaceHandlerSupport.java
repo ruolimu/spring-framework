@@ -16,18 +16,19 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.lang.Nullable;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.lang.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
+ * 注册指定元素的 BeanDefinitionParser 解析器
+ *
  * Support class for implementing custom {@link NamespaceHandler NamespaceHandlers}.
  * Parsing and decorating of individual {@link Node Nodes} is done via {@link BeanDefinitionParser}
  * and {@link BeanDefinitionDecorator} strategy interfaces, respectively.
@@ -45,6 +46,9 @@ import org.springframework.lang.Nullable;
 public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 
 	/**
+	 * key：元素名
+	 * value：对应 BeanDefinitionParser 的解析器
+	 *
 	 * Stores the {@link BeanDefinitionParser} implementations keyed by the
 	 * local name of the {@link Element Elements} they handle.
 	 */
@@ -64,23 +68,32 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 
 
 	/**
+	 * 开始自定义标签的解析
+	 *
 	 * Parses the supplied {@link Element} by delegating to the {@link BeanDefinitionParser} that is
 	 * registered for that {@link Element}.
 	 */
 	@Override
 	@Nullable
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		// <1> 获得元素对应的 BeanDefinitionParser 对象
 		BeanDefinitionParser parser = findParserForElement(element, parserContext);
+		// <2> 执行解析 parse方法在 AbstractBeanDefinitionParser 中实现
 		return (parser != null ? parser.parse(element, parserContext) : null);
 	}
 
 	/**
+	 * 获取对应的 BeanDefinitionParser 实例。
+	 * 实际上，其实就是获取在 NamespaceHandlerSupport 的 #registerBeanDefinitionParser() 方法里面注册的实例对象
+	 *
 	 * Locates the {@link BeanDefinitionParser} from the register implementations using
 	 * the local name of the supplied {@link Element}.
 	 */
 	@Nullable
 	private BeanDefinitionParser findParserForElement(Element element, ParserContext parserContext) {
+		// 获得元素名
 		String localName = parserContext.getDelegate().getLocalName(element);
+		// 获得 BeanDefinitionParser 对象
 		BeanDefinitionParser parser = this.parsers.get(localName);
 		if (parser == null) {
 			parserContext.getReaderContext().fatal(

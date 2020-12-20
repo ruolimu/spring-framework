@@ -49,6 +49,8 @@ import org.springframework.lang.Nullable;
 public interface NamespaceHandler {
 
 	/**
+	 * 注册指定元素的 BeanDefinitionParser 解析器
+	 *
 	 * Invoked by the {@link DefaultBeanDefinitionDocumentReader} after
 	 * construction but before any custom elements are parsed.
 	 * @see NamespaceHandlerSupport#registerBeanDefinitionParser(String, BeanDefinitionParser)
