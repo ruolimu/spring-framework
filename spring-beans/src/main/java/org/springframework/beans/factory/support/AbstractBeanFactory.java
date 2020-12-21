@@ -127,7 +127,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** Map from bean name to merged RootBeanDefinition. */
 	private final Map<String, RootBeanDefinition> mergedBeanDefinitions = new ConcurrentHashMap<>(256);
 
-	/** Names of beans that have already been created at least once. */
+	/** Names of beans that have already been created at least once.
+	 *
+	 * 已创建 Bean 的名字集合
+	 */
 	private final Set<String> alreadyCreated = Collections.newSetFromMap(new ConcurrentHashMap<>(256));
 
 	/** Names of beans that are currently in creation. */
@@ -233,24 +236,29 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
-			// <3> 因为 Spring 只解决单例模式下得循环依赖，在原型(多例)模式下如果存在循环依赖则会抛出异常
+			// <3> 检测。若当前 Bean 在创建，因为 Spring 只解决单例模式下得循环依赖，在原型(多例)模式下如果存在循环依赖则会抛出异常
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// <4> 如果容器中没有找到，则从父类容器中加载
-			// 如果当前容器缓存中没有相对应的 BeanDefinition 对象，则会尝试从父类工厂（parentBeanFactory）中加载，然后再去递归调用 #getBean(...) 方法
+			// 如果当前容器缓存 beanDefinitionMap 中没有相对应 beanName的 BeanDefinition 对象 （即在 Spring bean 初始化过程中没有加载），
+			// 则会尝试从父类工厂（parentBeanFactory）中加载，然后再去递归调用 #getBean(...) 方法
 			// Check if bean definition exists in this factory.
+
+			// 获取 parentBeanFactory
 			BeanFactory parentBeanFactory = getParentBeanFactory();
+			// parentBeanFactory 不为空且 beanDefinitionMap 中不存该 name 的 BeanDefinition
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
+				// 确定原始 beanName
 				// Not found -> check parent.
 				String nameToLookup = originalBeanName(name);
-				// 如果，父类容器为 AbstractBeanFactory ，直接递归查找
+				// 若为 AbstractBeanFactory 类型，委托父类处理，直接递归查找
 				if (parentBeanFactory instanceof AbstractBeanFactory) {
 					return ((AbstractBeanFactory) parentBeanFactory).doGetBean(
 							nameToLookup, requiredType, args, typeCheckOnly);
 				}
-				// 用明确的 args 从 parentBeanFactory 中，获取 Bean 对象
+				// 委托给构造函数 getBean() 处理，用明确的 args 从 parentBeanFactory 中，获取 Bean 对象
 				else if (args != null) {
 					// Delegation to parent with explicit args.
 					return (T) parentBeanFactory.getBean(nameToLookup, args);
@@ -260,13 +268,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					// No args -> delegate to standard getBean method.
 					return parentBeanFactory.getBean(nameToLookup, requiredType);
 				}
-				// 直接使用 nameToLookup 从 parentBeanFactory 获取 Bean 对象
+				// 委托给标准的 getBean() 处理，直接使用 nameToLookup 从 parentBeanFactory 获取 Bean 对象
 				else {
 					return (T) parentBeanFactory.getBean(nameToLookup);
 				}
 			}
 
-			// <5> 如果不是仅仅做类型检查则是创建bean，这里需要记录
+			// <5> 判断是否为类型检查	如果不是仅仅做类型检查则是创建bean，这里需要记录
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}
@@ -280,12 +288,14 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// 因为从 XML 配置文件中读取到的 Bean 信息是存储在 GenericBeanDefinition 中的。但是，所有的 Bean 后续处理都是针对于 RootBeanDefinition 的，所以这里需要进行一个转换
 				// 转换的同时，如果父类 bean 不为空的话，则会一并合并父类的属性
 				// <6> 从容器中获取 beanName 相应的 GenericBeanDefinition 对象，并将其转换为 RootBeanDefinition 对象
+				// mergedBeanDefinitions 中获取 beanName 对应的 RootBeanDefinition 对象。如果这个 BeanDefinition 是子 Bean 的话，则会合并父类的相关属性
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				// 检查给定的合并的 BeanDefinition
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
-				// <7> 处理所依赖的 bean
+				// <7> 依赖处理
+				// 通过迭代的方式依次对依赖 bean 进行检测、校验。如果通过，则调用 #getBean(String beanName) 方法，实例化依赖的 Bean 对象
 				// 对于依赖的 Bean ，它会优先加载，所以，在 Spring 的加载顺序中，在初始化某一个 Bean 的时候，首先会初始化这个 Bean 的依赖
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
@@ -1144,6 +1154,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
+	 * 判断当前 Bean 是否正在创建
+	 *
+	 * 检测逻辑和单例模式一样，一个“集合”存放着正在创建的 Bean ，从该集合中进行判断即可，只不过单例模式的“集合”为 Set ，而原型模式的则是 ThreadLocal
+	 *
 	 * Return whether the specified prototype bean is currently in creation
 	 * (within the current thread).
 	 * @param beanName the name of the bean
@@ -1151,7 +1165,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected boolean isPrototypeCurrentlyInCreation(String beanName) {
 		Object curVal = this.prototypesCurrentlyInCreation.get();
 		return (curVal != null &&
-				(curVal.equals(beanName) || (curVal instanceof Set && ((Set<?>) curVal).contains(beanName))));
+				(curVal.equals(beanName) // 相等
+						|| (curVal instanceof Set && ((Set<?>) curVal).contains(beanName)))); // 包含
 	}
 
 	/**
@@ -1255,7 +1270,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @return the original bean name
 	 */
 	protected String originalBeanName(String name) {
+		// 对 name 进行转换，获取真正的 beanName
 		String beanName = transformedBeanName(name);
+		// 如果 name 是以 “&” 开头的，则加上 “&” ，因为在 #transformedBeanName(String name) 方法，将 “&” 去掉了，这里补上
 		if (name.startsWith(FACTORY_BEAN_PREFIX)) {
 			beanName = FACTORY_BEAN_PREFIX + beanName;
 		}
@@ -1328,10 +1345,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throws BeansException {
 		// Quick check on the concurrent map first, with minimal locking.
+		// 快速从缓存中获取，如果不为空，则直接返回
 		RootBeanDefinition mbd = this.mergedBeanDefinitions.get(beanName);
 		if (mbd != null && !mbd.stale) {
 			return mbd;
 		}
+		// 获取 RootBeanDefinition，
+		// 如果返回的 BeanDefinition 是子类 bean 的话，则合并父类相关属性
 		return getMergedBeanDefinition(beanName, getBeanDefinition(beanName));
 	}
 
@@ -1765,12 +1785,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param beanName the name of the bean
 	 */
 	protected void markBeanAsCreated(String beanName) {
+		// 没有创建
 		if (!this.alreadyCreated.contains(beanName)) {
+			// 加上全局锁
 			synchronized (this.mergedBeanDefinitions) {
+				// 再次检查一次：DCL 双检查模式
 				if (!this.alreadyCreated.contains(beanName)) {
 					// Let the bean definition get re-merged now that we're actually creating
 					// the bean... just in case some of its metadata changed in the meantime.
+					// 从 mergedBeanDefinitions 中删除 beanName，并在下次访问时重新创建它。
 					clearMergedBeanDefinition(beanName);
+					// 添加到已创建 bean 集合中
 					this.alreadyCreated.add(beanName);
 				}
 			}
