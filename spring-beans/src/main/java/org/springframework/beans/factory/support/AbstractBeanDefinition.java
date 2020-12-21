@@ -158,6 +158,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private final Map<String, AutowireCandidateQualifier> qualifiers = new LinkedHashMap<>();
 
+	/**
+	 * 创建 Bean 的 Supplier 对象
+	 */
 	@Nullable
 	private Supplier<?> instanceSupplier;
 
