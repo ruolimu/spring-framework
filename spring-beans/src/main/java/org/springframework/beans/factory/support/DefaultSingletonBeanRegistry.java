@@ -65,7 +65,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/** Cache of singleton objects: bean name to bean instance.
 	 *
-	 * 存放的是单例 bean 的映射
+	 * 【单例对象的 Cache 】
+	 * 一级缓存，存放的是单例 bean 的映射
+	 * 注意，这里的 bean 是已经创建完成的
 	 *
 	 * 对应关系为 bean name --> bean instance
 	 *
@@ -75,7 +77,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/** Cache of singleton factories: bean name to ObjectFactory.
 	 *
-	 * 存放的是 ObjectFactory，可以理解为创建单例 bean 的 factory
+	 * 【单例对象工厂的 Cache】
+	 * 三级缓存,存放的是 ObjectFactory
+	 * 可以理解为创建早期半成品（未初始化完）的 bean 的 factory ，最终添加到二级缓存 {@link #earlySingletonObjects} 中
 	 *
 	 * 对应关系是 bean name --> ObjectFactory
 	 */
@@ -85,7 +89,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *
 	 * 这个 Map 是【循环依赖】的关键所在
 	 *
-	 * 存放的是早期的 bean
+	 * 【提前曝光的单例对象的 Cache 】
+	 * 二级缓存，存放的是早期半成品（未初始化完）的 bean
 	 *
 	 * 对应关系也是 bean name --> bean instance
 	 *
@@ -170,6 +175,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
+	 * 添加三级缓存
+	 *
 	 * Add the given singleton factory for building the specified singleton
 	 * if necessary.
 	 * <p>To be called for eager registration of singletons, e.g. to be able to
@@ -201,6 +208,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * reference to a currently created singleton (resolving a circular reference).
 	 * @param beanName the name of the bean to look for
 	 * @param allowEarlyReference whether early references should be created or not
+	 * 	允许提前拿到引用。其实真正的意思是，是否允许从 singletonFactories 缓存中通过 #getObject() 方法，拿到对象
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
 	@Nullable

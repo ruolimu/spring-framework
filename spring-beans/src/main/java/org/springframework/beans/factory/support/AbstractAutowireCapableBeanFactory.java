@@ -958,6 +958,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 对创建的早期半成品（未初始化）的 Bean 处理引用
+	 * 例如说，AOP 就是在这里动态织入，创建其代理 Bean 返回
+	 *
 	 * Obtain a reference for early access to the specified bean,
 	 * typically for the purpose of resolving a circular reference.
 	 * @param beanName the name of the bean (for error handling purposes)
